@@ -8,14 +8,16 @@ const PlanItemSchema = new mongoose.Schema({
   outcomes: { type: String, default: '' }
 });
 
-const MasterYearPlanSchema = new mongoose.Schema({
+const AssignmentSchema = new mongoose.Schema({
   blockName: { type: String, required: true },
   subject: { type: String, required: true },
-  grade: { type: String, required: true },
+  grades: [{ type: String }],
   yearPlan: [PlanItemSchema]
 });
 
-// Ensures a unique combination of blockName, subject, and grade
-MasterYearPlanSchema.index({ blockName: 1, subject: 1, grade: 1 }, { unique: true });
+const TeacherSchema = new mongoose.Schema({
+  teacherName: { type: String, required: true },
+  assignments: [AssignmentSchema]
+});
 
-export default mongoose.model('MasterYearPlan', MasterYearPlanSchema);
+export default mongoose.model('Teacher', TeacherSchema);
