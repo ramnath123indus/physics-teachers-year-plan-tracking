@@ -10,8 +10,9 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Hardcoded to your live Render backend URL for foolproof connection
-  const apiHost = 'https://physics-teachers-year-plan-tracking-1.onrender.com';
+ 
+// This automatically removes any accidental trailing slash from the URL string
+   const apiHost = ('https://physics-teachers-year-plan-tracking-1.onrender.com').replace(/\/+$/, ''); 
 
   const handleLogin = async (e) => {
     e.preventDefault();
