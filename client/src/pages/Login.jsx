@@ -10,7 +10,8 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  // Hardcoded to your live Render backend URL for foolproof connection
+  const apiHost = 'https://physics-teachers-year-plan-tracking-1.onrender.com';
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -61,7 +62,7 @@ export default function Login({ onLoginSuccess }) {
       <div style={{ 
         position: 'relative',
         zIndex: 1,
-        background: 'rgba(255, 255, 255, 0.92)', // Slightly translucent white to blend nicely with the bright background
+        background: 'rgba(255, 255, 255, 0.92)', 
         padding: '2.5rem', 
         borderRadius: '8px', 
         boxShadow: '0 4px 15px rgba(0,0,0,0.15)', 
