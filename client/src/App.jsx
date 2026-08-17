@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import Login from './pages/Login';
 import TeacherRegistration from './pages/TeacherRegistration';
-import ManageTeachers from './pages/ManageTeachers'; // <--- New Edit/Delete Teachers Page
-import UpdateTeacherYearPlan from './pages/UpdateTeacherYearPlan';
+import ManageTeachers from './pages/ManageTeachers';
+import UpdateTeacherYearPlan from "./pages/UpdateTeacherYearPlan";
 import TeacherDashboard from './pages/TeacherDashboard';
 
 export default function App() {
