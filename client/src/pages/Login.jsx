@@ -10,11 +10,12 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Automatically switches between Local backend and Render backend based on where it's opened
+  // Dynamically uses VITE_API_URL environment variable, or falls back intelligently
   const apiHost = (
-    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    import.meta.env.VITE_API_URL || 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
       ? 'http://localhost:5000'
-      : 'https://physics-teachers-year-plan-tracking-1.onrender.com'
+      : 'https://physics-teachers-year-plan-tracking-1.onrender.com')
   ).replace(/\/+$/, '');
 
   const handleLogin = async (e) => {
