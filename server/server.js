@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import teacherRoutes from './routes/teacherRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import masterPlanRoutes from './routes/masterPlanRoutes.js';
-import Teacher from './models/Teacher.js'; // <--- Imported Teacher model for login lookup
+import Teacher from './models/Teacher.js';
 
 // Load environment variables from .env file
 dotenv.config();
