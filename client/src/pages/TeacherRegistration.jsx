@@ -5,7 +5,7 @@ const BLOCKS_LIST = ['General', 'Kailash', 'Nilgiri', 'Aravalli', 'Sumeru', 'Vin
 const SUBJECTS_LIST = ['TELUGU', 'ENGLISH', 'MATHS', 'PHYSICS', 'CHEMISTRY', 'BIOLOGY', 'SOCIAL', 'COMPUTER'];
 const GRADES_LIST = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'];
 
-const INITIAL_ASSIGNMENT = { blockName: 'General', subject: 'PHYSICS', grades: [' '] };
+const INITIAL_ASSIGNMENT = { blockName: 'General', subject: 'PHYSICS', grades: [] };
 
 function TeacherRegistration() {
   const [teacherName, setTeacherName] = useState('');
@@ -79,9 +79,14 @@ function TeacherRegistration() {
 
     setLoading(true);
     try {
-      const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      // ✅ Dynamic environment resolution (Vercel vs Localhost)
+      const apiHost = (
+        import.meta.env.VITE_API_URL || 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          ? 'http://localhost:5000'
+          : 'https://physics-teachers-year-plan-tracking-1.onrender.com')
+      ).replace(/\/+$/, '');
       
-      // ✅ FIXED ENDPOINT: Changed from /api/teachers/register-multi to /api/teachers
       await axios.post(`${apiHost}/api/teachers`, {
         teacherName: teacherName.trim(),
         assignments
