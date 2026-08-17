@@ -10,9 +10,8 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
- 
-// This automatically removes any accidental trailing slash from the URL string
-   const apiHost = ('https://physics-teachers-year-plan-tracking-1.onrender.com').replace(/\/+$/, ''); 
+  // Pointing to your local backend server running on port 5000
+  const apiHost = 'http://localhost:5000';
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -45,7 +44,7 @@ export default function Login({ onLoginSuccess }) {
       background: '#f8f9fa'
     }}>
       
-      {/* Background Logo (logo3) - Made brighter by increasing opacity to 0.4 */}
+      {/* Background Logo (logo3) */}
       <div style={{
         position: 'absolute',
         top: 0,
@@ -72,7 +71,7 @@ export default function Login({ onLoginSuccess }) {
         textAlign: 'center' 
       }}>
         
-        {/* Header Container: Logo 1 (Left), School Name (Center), Logo 2 (Right) */}
+        {/* Header Container */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', marginBottom: '1.5rem' }}>
           <img 
             src={logo1} 
