@@ -10,8 +10,12 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Pointing to your local backend server running on port 5000
-  const apiHost = 'http://localhost:5000';
+  // Automatically switches between Local backend and Render backend based on where it's opened
+  const apiHost = (
+    window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5000'
+      : 'https://physics-teachers-year-plan-tracking-1.onrender.com'
+  ).replace(/\/+$/, '');
 
   const handleLogin = async (e) => {
     e.preventDefault();
