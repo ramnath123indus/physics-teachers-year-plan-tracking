@@ -11,9 +11,9 @@ const EXCEL_DIR = path.join(process.cwd(), 'server', 'master-excel-files');
 // Configure multer for memory storage (for Excel uploads)
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Helper function to resolve physical file path based on Kailash vs General rule
+// Helper function to resolve physical file path safely
 function getPhysicalExcelFilePath(blockName, subject, grade) {
-  const gradeStr = grade.toString().replace('Grade ', '');
+  const gradeStr = grade.toString().replace('Grade ', '').trim();
   let fileName = '';
 
   if (blockName && blockName.toUpperCase() === 'KAILASH') {
@@ -59,7 +59,7 @@ router.post('/', async (req, res) => {
 
         if (assignment.grades && assignment.grades.length > 0) {
           for (const grade of assignment.grades) {
-            // Get physical file path based on Kailash vs General rule
+            // Get physical file path safely based on Kailash vs General rule
             const filePath = getPhysicalExcelFilePath(blockName, subject, grade);
 
             if (fs.existsSync(filePath)) {
@@ -87,6 +87,8 @@ router.post('/', async (req, res) => {
               } catch (readErr) {
                 console.error(`Error reading file ${filePath}:`, readErr);
               }
+            } else {
+              console.warn(`Master Excel file not found on disk: ${filePath}. Skipping auto-population for this grade.`);
             }
           }
         }
