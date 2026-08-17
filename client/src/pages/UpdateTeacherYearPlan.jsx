@@ -18,9 +18,16 @@ export default function UpdateTeacherYearPlan() {
   // Mode State: 'view', 'edit'
   const [mode, setMode] = useState('view');
 
+  // Dynamically uses VITE_API_URL environment variable, or falls back intelligently
+  const apiHost = (
+    import.meta.env.VITE_API_URL || 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5000'
+      : 'https://physics-teachers-year-plan-tracking-1.onrender.com')
+  ).replace(/\/+$/, '');
+
   // Fetch registered teachers on mount
   useEffect(() => {
-    const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     axios.get(`${apiHost}/api/teachers`)
       .then(res => {
         setTeachers(res.data.teachers || res.data || []);
@@ -28,19 +35,16 @@ export default function UpdateTeacherYearPlan() {
       .catch(err => {
         console.error('Error fetching registered teachers:', err);
       });
-  }, []);
+  }, [apiHost]);
 
   // Fetch Year Plan data when all filters are selected
   useEffect(() => {
     if (selectedTeacherObj && selectedBlock && selectedSubject && selectedGrade) {
-      const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      // Clean grade query safely
       const gradeQuery = String(selectedGrade).replace(/Grade\s*/i, '').trim();
 
       setLoading(true);
       setMessage('');
 
-      // Added teacherName or teacherId as an extra parameter if your backend requires it
       const teacherParam = selectedTeacherObj.teacherName ? `&teacherName=${encodeURIComponent(selectedTeacherObj.teacherName)}` : '';
 
       axios.get(`${apiHost}/api/master-plans/submit?blockName=${encodeURIComponent(selectedBlock)}&subject=${encodeURIComponent(selectedSubject)}&grade=${encodeURIComponent(gradeQuery)}${teacherParam}`)
@@ -68,7 +72,7 @@ export default function UpdateTeacherYearPlan() {
     } else {
       setYearPlan([]);
     }
-  }, [selectedTeacherObj, selectedBlock, selectedSubject, selectedGrade]);
+  }, [apiHost, selectedTeacherObj, selectedBlock, selectedSubject, selectedGrade]);
 
   const handleTeacherChange = (e) => {
     const teacherName = e.target.value;
@@ -107,7 +111,6 @@ export default function UpdateTeacherYearPlan() {
   const handleSavePlan = async () => {
     if (!yearPlan.length) return;
 
-    const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     const gradeQuery = String(selectedGrade).replace(/Grade\s*/i, '').trim();
 
     setSaving(true);
