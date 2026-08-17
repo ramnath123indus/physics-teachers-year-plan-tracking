@@ -30,18 +30,22 @@ export default function UpdateTeacherYearPlan() {
       });
   }, []);
 
-  // Fetch Excel sheet data when filters are selected
+  // Fetch Year Plan data when all filters are selected
   useEffect(() => {
     if (selectedTeacherObj && selectedBlock && selectedSubject && selectedGrade) {
       const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const gradeQuery = selectedGrade.replace('Grade ', '');
+      // Clean grade query safely
+      const gradeQuery = String(selectedGrade).replace(/Grade\s*/i, '').trim();
 
       setLoading(true);
       setMessage('');
 
-      axios.get(`${apiHost}/api/master-plans/submit?blockName=${selectedBlock}&subject=${selectedSubject}&grade=${gradeQuery}`)
+      // Added teacherName or teacherId as an extra parameter if your backend requires it
+      const teacherParam = selectedTeacherObj.teacherName ? `&teacherName=${encodeURIComponent(selectedTeacherObj.teacherName)}` : '';
+
+      axios.get(`${apiHost}/api/master-plans/submit?blockName=${encodeURIComponent(selectedBlock)}&subject=${encodeURIComponent(selectedSubject)}&grade=${encodeURIComponent(gradeQuery)}${teacherParam}`)
         .then(res => {
-          const fetchedPlan = res.data.yearPlan || [];
+          const fetchedPlan = res.data.yearPlan || res.data || [];
           const processedPlan = fetchedPlan.map(row => ({
             ...row,
             status: row.status && row.status.trim() !== '' ? row.status : 'NONE',
@@ -58,7 +62,7 @@ export default function UpdateTeacherYearPlan() {
         .catch(err => {
           console.error('Error loading plan:', err);
           setYearPlan([]);
-          setMessage('❌ Excel file not found or failed to load for this selection.');
+          setMessage('❌ Year plan data not found or failed to load for this selection.');
           setLoading(false);
         });
     } else {
@@ -104,13 +108,14 @@ export default function UpdateTeacherYearPlan() {
     if (!yearPlan.length) return;
 
     const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-    const gradeQuery = selectedGrade.replace('Grade ', '');
+    const gradeQuery = String(selectedGrade).replace(/Grade\s*/i, '').trim();
 
     setSaving(true);
     setMessage('');
 
     try {
       const payload = {
+        teacherName: selectedTeacherObj?.teacherName || '',
         blockName: selectedBlock,
         subject: selectedSubject,
         grade: gradeQuery,
@@ -129,7 +134,6 @@ export default function UpdateTeacherYearPlan() {
     }
   };
 
-  // Export Table Data to Excel File with Professional Styling, AutoFit, and Alignment
   const handleExportExcel = () => {
     if (!yearPlan.length) return;
 
@@ -152,84 +156,9 @@ export default function UpdateTeacherYearPlan() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Year Plan');
 
-    const range = XLSX.utils.decode_range(worksheet['!ref']);
-    
-    const colWidths = [];
-    const rowHeights = [{ hpx: 28 }];
-
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      let maxLen = 10;
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        const cell = worksheet[cellAddress];
-        if (cell && cell.v) {
-          const valStr = String(cell.v);
-          if (valStr.length > maxLen) {
-            maxLen = valStr.length;
-          }
-        }
-      }
-      colWidths.push({ wch: maxLen + 4 });
-    }
-    worksheet['!cols'] = colWidths;
-
-    for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-      rowHeights.push({ hpx: 22 });
-    }
-    worksheet['!rows'] = rowHeights;
-
-    for (let R = range.s.r; R <= range.e.r; ++R) {
-      for (let C = range.s.c; C <= range.e.c; ++C) {
-        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-        if (!worksheet[cellAddress]) continue;
-
-        if (!worksheet[cellAddress].s) worksheet[cellAddress].s = {};
-
-        worksheet[cellAddress].s.font = { name: 'Segoe UI', sz: 11 };
-        worksheet[cellAddress].s.border = {
-          top: { style: 'thin', color: { rgb: 'E0E0E0' } },
-          bottom: { style: 'thin', color: { rgb: 'E0E0E0' } },
-          left: { style: 'thin', color: { rgb: 'E0E0E0' } },
-          right: { style: 'thin', color: { rgb: 'E0E0E0' } }
-        };
-
-        if (R === 0) {
-          worksheet[cellAddress].s.fill = { fgColor: { rgb: '2D3436' } };
-          worksheet[cellAddress].s.font = { name: 'Segoe UI', sz: 11, bold: true, color: { rgb: 'FFFFFF' } };
-          worksheet[cellAddress].s.alignment = { horizontal: 'center', vertical: 'center' };
-        } else {
-          if (C === 0) {
-            worksheet[cellAddress].s.alignment = { horizontal: 'center', vertical: 'center' };
-          } else {
-            worksheet[cellAddress].s.alignment = { horizontal: 'left', vertical: 'center', indent: 1 };
-          }
-
-          const isEven = R % 2 === 0;
-          let rowBg = isEven ? 'F9F9F9' : 'FFFFFF';
-
-          const cellVal = String(worksheet[cellAddress].v || '').trim().toUpperCase();
-          if (cellVal === 'COMPLETED') {
-            worksheet[cellAddress].s.fill = { fgColor: { rgb: 'E8F5E9' } };
-            worksheet[cellAddress].s.font = { name: 'Segoe UI', sz: 10, bold: true, color: { rgb: '2E7D32' } };
-            worksheet[cellAddress].s.alignment = { horizontal: 'center', vertical: 'center' };
-          } else if (cellVal.includes('PROCESS') || cellVal.includes('PROGRESS')) {
-            worksheet[cellAddress].s.fill = { fgColor: { rgb: 'FFFDE7' } };
-            worksheet[cellAddress].s.font = { name: 'Segoe UI', sz: 10, bold: true, color: { rgb: 'F57F17' } };
-            worksheet[cellAddress].s.alignment = { horizontal: 'center', vertical: 'center' };
-          } else if (cellVal === 'NONE' || cellVal === 'NOT ASSIGNED') {
-            worksheet[cellAddress].s.fill = { fgColor: { rgb: 'F5F5F5' } };
-            worksheet[cellAddress].s.font = { name: 'Segoe UI', sz: 10, bold: true, color: { rgb: '616161' } };
-            worksheet[cellAddress].s.alignment = { horizontal: 'center', vertical: 'center' };
-          } else {
-            worksheet[cellAddress].s.fill = { fgColor: { rgb: rowBg } };
-          }
-        }
-      }
-    }
-
     const fileName = `${selectedTeacherObj?.teacherName || 'Teacher'}_${selectedSubject}_${selectedGrade}.xlsx`;
     XLSX.writeFile(workbook, fileName);
-    setMessage('📥 Colorful and autofitted Year Plan exported to Excel successfully!');
+    setMessage('📥 Year Plan exported to Excel successfully!');
   };
 
   const getDropdownStyle = (val) => {
@@ -386,7 +315,6 @@ export default function UpdateTeacherYearPlan() {
                         </td>
                       ))}
 
-                      {/* Section Dropdowns using NOT ASSIGNED */}
                       {['section1', 'section2', 'section3', 'section4', 'section5', 'section6'].map((secField) => (
                         <td key={secField} style={{ padding: '6px', border: '1px solid #ddd' }}>
                           <select
@@ -402,7 +330,6 @@ export default function UpdateTeacherYearPlan() {
                         </td>
                       ))}
 
-                      {/* Status Dropdown using NONE */}
                       <td style={{ padding: '6px', border: '1px solid #ddd' }}>
                         <select
                           value={row.status || 'NONE'}
@@ -422,7 +349,6 @@ export default function UpdateTeacherYearPlan() {
             </table>
           </div>
 
-          {/* Action Button (Save Changes in Edit mode) */}
           {mode === 'edit' && (
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button
