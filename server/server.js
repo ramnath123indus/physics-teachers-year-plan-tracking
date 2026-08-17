@@ -6,6 +6,7 @@ import teacherRoutes from './routes/teacherRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 import masterPlanRoutes from './routes/masterPlanRoutes.js';
 import Teacher from './models/Teacher.js';
+import authRoutes from './routes/authRoutes.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -74,6 +75,7 @@ app.post('/api/login', async (req, res) => {
 app.use('/api/master-plans', masterPlanRoutes);
 app.use('/api/teachers', teacherRoutes);
 app.use('/api/students', studentRoutes);
+app.use('/api', authRoutes);
 
 // Root health-check route
 app.get('/', (req, res) => {
