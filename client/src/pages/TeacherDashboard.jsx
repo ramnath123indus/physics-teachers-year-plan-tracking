@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 
-export default function TeacherDashboard() {
+export default function TeacherYearPlanDashboard() {
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacherObj, setSelectedTeacherObj] = useState(null);
   
@@ -35,7 +35,7 @@ export default function TeacherDashboard() {
       });
   }, [apiHost]);
 
-  // Automatically fetch Excel sheet when all filters are selected
+  // Fetch Year Plan data when all filters are selected
   useEffect(() => {
     if (selectedTeacherObj && selectedBlock && selectedSubject && selectedGrade) {
       const gradeQuery = String(selectedGrade).replace(/Grade\s*/i, '').trim();
@@ -48,14 +48,24 @@ export default function TeacherDashboard() {
       axios.get(`${apiHost}/api/master-plans/submit?blockName=${encodeURIComponent(selectedBlock)}&subject=${encodeURIComponent(selectedSubject)}&grade=${encodeURIComponent(gradeQuery)}${teacherParam}`)
         .then(res => {
           const fetchedPlan = res.data.yearPlan || res.data || [];
-          setYearPlan(fetchedPlan);
+          const processedPlan = fetchedPlan.map(row => ({
+            ...row,
+            status: row.status && row.status.trim() !== '' ? row.status : 'NONE',
+            section1: row.section1 && row.section1.trim() !== '' ? row.section1 : 'NOT ASSIGNED',
+            section2: row.section2 && row.section2.trim() !== '' ? row.section2 : 'NOT ASSIGNED',
+            section3: row.section3 && row.section3.trim() !== '' ? row.section3 : 'NOT ASSIGNED',
+            section4: row.section4 && row.section4.trim() !== '' ? row.section4 : 'NOT ASSIGNED',
+            section5: row.section5 && row.section5.trim() !== '' ? row.section5 : 'NOT ASSIGNED',
+            section6: row.section6 && row.section6.trim() !== '' ? row.section6 : 'NOT ASSIGNED'
+          }));
+          setYearPlan(processedPlan);
           setLoading(false);
         })
         .catch(err => {
           console.error('Error loading plan:', err);
           setYearPlan([]);
           const serverErrorMsg = err.response?.data?.error || err.response?.data?.message || err.message;
-          setMessage(`❌ Excel file not found or failed to load: ${serverErrorMsg}`);
+          setMessage(`❌ Year plan data not found or failed to load: ${serverErrorMsg}`);
           setLoading(false);
         });
     } else {
@@ -107,44 +117,65 @@ export default function TeacherDashboard() {
   const inProgressPercentage = totalEntries > 0 ? Math.round((inProgressCount / totalEntries) * 100) : 0;
   const pendingPercentage = totalEntries > 0 ? Math.round((pendingCount / totalEntries) * 100) : 0;
 
-  // Function to handle exporting current year plan to an Excel file
   const handleExportExcel = () => {
-    if (!yearPlan || yearPlan.length === 0) {
-      alert("No data available to export!");
-      return;
-    }
+    if (!yearPlan.length) return;
 
-    const exportData = yearPlan.map(row => ({
-      'MONTH': row.month || '',
-      'NCERT SYLLABUS': row.ncertSyllabus || '',
-      'ASSESSMENTS': row.assessments || '',
-      'IIT SYLLABUS': row.iitSyllabus || '',
-      'SECTION-1': row.section1 || 'Not Assigned',
-      'SECTION-2': row.section2 || 'Not Assigned',
-      'SECTION-3': row.section3 || 'Not Assigned',
-      'SECTION-4': row.section4 || 'Not Assigned',
-      'SECTION-5': row.section5 || 'Not Assigned',
-      'SECTION-6': row.section6 || 'Not Assigned',
-      'STATUS': row.status || 'Not Assigned'
+    const exportData = yearPlan.map((row, idx) => ({
+      '#': idx + 1,
+      'Month': row.month || '',
+      'NCERT Syllabus': row.ncertSyllabus || '',
+      'Assessments': row.assessments || '',
+      'IIT Syllabus': row.iitSyllabus || '',
+      'Section-1': row.section1 || '',
+      'Section-2': row.section2 || '',
+      'Section-3': row.section3 || '',
+      'Section-4': row.section4 || '',
+      'Section-5': row.section5 || '',
+      'Section-6': row.section6 || '',
+      'Status': row.status || ''
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'YearPlan');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Year Plan');
 
-    const fileName = `YearPlan_${selectedBlock || 'Block'}_${selectedSubject || 'Subject'}_${selectedGrade || 'Grade'}.xlsx`;
+    const fileName = `${selectedTeacherObj?.teacherName || 'Teacher'}_${selectedSubject}_${selectedGrade}.xlsx`;
     XLSX.writeFile(workbook, fileName);
+    setMessage('📥 Year Plan exported to Excel successfully!');
+  };
+
+  const getBadgeStyle = (val) => {
+    const upper = val ? val.trim().toUpperCase() : '';
+    let bg = '#f5f5f5';
+    let color = '#616161';
+
+    if (upper === 'COMPLETED') {
+      bg = '#e8f5e9';
+      color = '#2e7d32';
+    } else if (upper === 'IN PROCESS' || upper === 'IN PROGRESS') {
+      bg = '#fffde7';
+      color = '#f57f17';
+    }
+
+    return {
+      display: 'inline-block',
+      padding: '4px 8px',
+      borderRadius: '4px',
+      background: bg,
+      fontWeight: 'bold',
+      color: color,
+      fontSize: '0.8rem'
+    };
   };
 
   const assignmentsList = selectedTeacherObj?.assignments || [];
 
   return (
     <div style={{ padding: '2rem', fontFamily: 'Segoe UI, sans-serif', maxWidth: '1400px', margin: '0 auto' }}>
-      <h2>Teacher Year Plan Dashboard (View Only)</h2>
+      <h2>👀 Teacher Year Plan Dashboard (View Only)</h2>
 
-      {/* Dropdown Selection Filters */}
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap', alignItems: 'center', background: '#f8f9fa', padding: '1.5rem', borderRadius: '8px', border: '1px solid #dfe6e9' }}>
-        
+      {/* Filter Controls */}
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center', background: '#f8f9fa', padding: '1.5rem', borderRadius: '8px', border: '1px solid #dfe6e9' }}>
         <div>
           <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '0.4rem' }}>Teacher Name:</label>
           <select value={selectedTeacherObj?.teacherName || ''} onChange={handleTeacherChange} style={{ padding: '0.6rem', minWidth: '160px', borderRadius: '6px', border: '1px solid #ccc' }}>
@@ -197,7 +228,7 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
-      {/* 👩‍🏫 TEACHER PROFILE & WORKLOAD SUMMARY CARD */}
+      {/* Teacher Profile Card */}
       {selectedTeacherObj && (
         <div style={{ background: '#e1f5fe', padding: '15px 20px', borderRadius: '8px', border: '1px solid #b3e5fc', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
           <div>
@@ -217,26 +248,23 @@ export default function TeacherDashboard() {
         </div>
       )}
 
-      {loading && <p>Loading data from Excel sheet...</p>}
-      {message && <div style={{ background: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '6px', marginBottom: '1rem', fontWeight: 'bold' }}>{message}</div>}
+      {loading && <p>Loading year plan data...</p>}
+      {message && <div style={{ background: message.includes('❌') ? '#f8d7da' : '#d4edda', color: message.includes('❌') ? '#721c24' : '#155724', padding: '12px', borderRadius: '6px', marginBottom: '1.5rem', fontWeight: 'bold' }}>{message}</div>}
 
-      {/* Main Excel Plan Section with Analytics & Charts */}
       {yearPlan.length > 0 && (
         <div>
-          
-          {/* 📊 ANALYTICS & VISUAL CHARTS SECTION */}
+          {/* Analytics Summary Card */}
           <div style={{ background: '#ffffff', padding: '20px', borderRadius: '8px', border: '1px solid #dfe6e9', marginBottom: '1.5rem', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
               <h3 style={{ margin: 0, color: '#2d3436', fontSize: '1.1rem' }}>📈 Year Plan Analytics & Progress Summary</h3>
               <button
                 onClick={handleExportExcel}
-                style={{ padding: '0.5rem 1.2rem', background: '#28a745', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}
+                style={{ padding: '0.5rem 1.2rem', background: '#00b894', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}
               >
                 📥 Export to Excel
               </button>
             </div>
 
-            {/* Metric Cards Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginBottom: '20px' }}>
               <div style={{ background: '#e8f5e9', padding: '12px 15px', borderRadius: '6px', borderLeft: '4px solid #2e7d32' }}>
                 <span style={{ fontSize: '0.85rem', color: '#2e7d32', fontWeight: 'bold' }}>COMPLETED</span>
@@ -254,7 +282,7 @@ export default function TeacherDashboard() {
               </div>
             </div>
 
-            {/* Custom Multi-Segment Progress Bar Chart */}
+            {/* Progress Bar Chart */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#666', marginBottom: '5px' }}>
                 <span>Overall Completion Distribution</span>
@@ -275,7 +303,7 @@ export default function TeacherDashboard() {
             </div>
           </div>
 
-          {/* Read-Only Table Container */}
+          {/* Read-Only Table */}
           <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
               <thead>
@@ -296,29 +324,37 @@ export default function TeacherDashboard() {
               </thead>
               <tbody>
                 {yearPlan.map((row, index) => {
-                  const statusVal = row.status ? row.status.trim().toUpperCase() : '';
-                  const isCompleted = statusVal === 'COMPLETED';
-                  const isInProgress = statusVal === 'IN PROCESS' || statusVal === 'IN-PROGRESS' || statusVal === 'INPROGRESS';
-                  
+                  const statusVal = row.status ? row.status.trim().toUpperCase() : 'NONE';
                   let rowBg = 'transparent';
-                  if (isCompleted) rowBg = '#f1f8e9';
-                  if (isInProgress) rowBg = '#fffde7';
+                  if (statusVal === 'COMPLETED') rowBg = '#f1f8e9';
+                  if (statusVal.includes('PROGRESS')) rowBg = '#fffde7';
 
                   return (
                     <tr key={index} style={{ borderBottom: '1px solid #ddd', background: rowBg }}>
                       <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{index + 1}</td>
                       
-                      {['month', 'ncertSyllabus', 'assessments', 'iitSyllabus', 'section1', 'section2', 'section3', 'section4', 'section5', 'section6', 'status'].map((field) => (
-                        <td key={field} style={{ padding: '8px', border: '1px solid #ddd' }}>
-                          <span style={{ 
-                            fontSize: '0.9rem', 
-                            color: field === 'status' && isCompleted ? '#2e7d32' : field === 'status' && isInProgress ? '#f57f17' : '#2d3436', 
-                            fontWeight: field === 'status' && (isCompleted || isInProgress) ? 'bold' : 'normal' 
-                          }}>
-                            {row[field] || '-'}
+                      {/* Text Fields */}
+                      {['month', 'ncertSyllabus', 'assessments', 'iitSyllabus'].map((field) => (
+                        <td key={field} style={{ padding: '8px', border: '1px solid #ddd', fontSize: '0.85rem' }}>
+                          {row[field] || '-'}
+                        </td>
+                      ))}
+
+                      {/* Section Badges */}
+                      {['section1', 'section2', 'section3', 'section4', 'section5', 'section6'].map((secField) => (
+                        <td key={secField} style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>
+                          <span style={getBadgeStyle(row[secField])}>
+                            {row[secField] || 'NOT ASSIGNED'}
                           </span>
                         </td>
                       ))}
+
+                      {/* Status Badge */}
+                      <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>
+                        <span style={getBadgeStyle(row.status)}>
+                          {row.status || 'NONE'}
+                        </span>
+                      </td>
                     </tr>
                   );
                 })}
