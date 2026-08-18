@@ -26,7 +26,6 @@ export default function Login({ onLoginSuccess }) {
     try {
       const response = await axios.post(`${apiHost}/api/login`, { username, password });
       
-      // Store token/user info in localStorage if provided by backend
       if (response.data.token) {
         localStorage.setItem('userToken', response.data.token);
       }
@@ -74,124 +73,175 @@ export default function Login({ onLoginSuccess }) {
         backgroundImage: `url(${logo3})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        opacity: 0.4, 
+        opacity: 0.35, 
         zIndex: 0
       }} />
 
-      {/* Main Login Card */}
-      <div style={{ 
+      {/* Outer Card Wrapper with Gradient Border Effect */}
+      <div style={{
         position: 'relative',
         zIndex: 1,
-        background: 'rgba(255, 255, 255, 0.95)', 
-        padding: '2.5rem 1.75rem', 
-        borderRadius: '12px', 
-        boxShadow: '0 8px 24px rgba(0,0,0,0.15)', 
-        width: '100%', 
-        maxWidth: '460px', 
-        textAlign: 'center',
+        background: 'linear-gradient(135deg, #0984e3, #e84393, #6c5ce7)',
+        padding: '3px',
+        borderRadius: '24px',
+        width: '100%',
+        maxWidth: '440px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
         boxSizing: 'border-box'
       }}>
         
-        {/* Header Container: Logo 1 + School Name on the left, Logo 2 on the right */}
+        {/* Main Inner Login Card */}
         <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          gap: '10px', 
-          marginBottom: '1.5rem',
-          flexWrap: 'nowrap'
+          background: '#ffffff', 
+          padding: '2rem 1.5rem', 
+          borderRadius: '22px', 
+          textAlign: 'center',
+          boxSizing: 'border-box',
+          width: '100%'
         }}>
-          {/* Left group: Logo 1 and School Name */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', flexGrow: 1 }}>
+          
+          {/* Header Container: Logo 1, Title, Logo 2 */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            gap: '10px', 
+            marginBottom: '1rem'
+          }}>
             <img 
               src={logo1} 
               alt="Logo 1" 
-              style={{ width: '38px', height: '38px', objectFit: 'contain', flexShrink: 0 }} 
+              style={{ width: '55px', height: '55px', objectFit: 'contain', flexShrink: 0 }} 
             />
             
-            <h2 style={{ 
-              margin: 0, 
-              color: '#0984e3', 
-              fontSize: '0.78rem', 
-              whiteSpace: 'nowrap', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis',
-              textAlign: 'left',
-              fontWeight: 'bold'
-            }}>
-              MONTESSORI INDUS RESIDENTIAL SCHOOL
-            </h2>
+            <div style={{ flexGrow: 1, textAlign: 'center', overflow: 'hidden' }}>
+              <h2 style={{ 
+                margin: '0 0 2px 0', 
+                color: '#1e272e', 
+                fontSize: '1rem', 
+                fontWeight: 'bold',
+                lineHeight: '1.2'
+              }}>
+                Montessori Indus
+              </h2>
+              <h2 style={{ 
+                margin: 0, 
+                color: '#1e272e', 
+                fontSize: '1rem', 
+                fontWeight: 'bold',
+                lineHeight: '1.2'
+              }}>
+                Residential School
+              </h2>
+            </div>
+
+            <img 
+              src={logo2} 
+              alt="Logo 2" 
+              style={{ width: '55px', height: '55px', objectFit: 'contain', flexShrink: 0 }} 
+            />
           </div>
 
-          {/* Right logo: Logo 2 */}
-          <img 
-            src={logo2} 
-            alt="Logo 2" 
-            style={{ width: '38px', height: '38px', objectFit: 'contain', flexShrink: 0 }} 
-          />
-        </div>
-
-        {error && (
+          {/* Tracker Subtitle Badge */}
           <div style={{ 
-            background: '#f8d7da', 
-            color: '#721c24', 
-            padding: '10px', 
-            borderRadius: '6px', 
-            marginBottom: '1rem', 
-            fontSize: '0.9rem', 
+            background: '#f1f2f6', 
+            color: '#3742fa', 
+            fontSize: '0.75rem', 
             fontWeight: 'bold', 
-            textAlign: 'left' 
+            padding: '8px 12px', 
+            borderRadius: '20px', 
+            letterSpacing: '0.5px',
+            marginBottom: '1.5rem',
+            border: '1px solid #dfe4ea'
           }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem', textAlign: 'left' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#636e72', fontSize: '0.9rem' }}>Username</label>
-            <input 
-              type="text" 
-              value={username} 
-              onChange={(e) => setUsername(e.target.value)} 
-              required
-              style={{ width: '100%', padding: '11px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem', boxSizing: 'border-box' }}
-              placeholder="Enter your username"
-            />
+            TEACHERS YEAR PLAN TRACKER
           </div>
 
-          <div>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: '600', color: '#636e72', fontSize: '0.9rem' }}>Password</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              required
-              style={{ width: '100%', padding: '11px', borderRadius: '6px', border: '1px solid #ccc', fontSize: '1rem', boxSizing: 'border-box' }}
-              placeholder="Enter your password"
-            />
-          </div>
-
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={{ 
-              background: '#0984e3', 
-              color: '#fff', 
-              border: 'none', 
-              padding: '12px', 
-              borderRadius: '6px', 
-              fontSize: '1rem', 
+          {error && (
+            <div style={{ 
+              background: '#f8d7da', 
+              color: '#721c24', 
+              padding: '10px', 
+              borderRadius: '8px', 
+              marginBottom: '1rem', 
+              fontSize: '0.85rem', 
               fontWeight: 'bold', 
-              cursor: 'pointer', 
-              marginTop: '0.5rem', 
-              width: '100%',
-              boxSizing: 'border-box',
-              transition: 'background 0.2s' 
-            }}
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+              textAlign: 'left' 
+            }}>
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', textAlign: 'left' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#2f3640', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
+                USER NAME
+              </label>
+              <input 
+                type="text" 
+                value={username} 
+                onChange={(e) => setUsername(e.target.value)} 
+                required
+                style={{ 
+                  width: '100%', 
+                  padding: '12px 14px', 
+                  borderRadius: '10px', 
+                  border: '1px solid #dcdde1', 
+                  fontSize: '0.95rem', 
+                  boxSizing: 'border-box',
+                  background: '#fcfcfc',
+                  outline: 'none'
+                }}
+                placeholder="Enter your username"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', fontWeight: 'bold', color: '#2f3640', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
+                PASSWORD
+              </label>
+              <input 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required
+                style={{ 
+                  width: '100%', 
+                  padding: '12px 14px', 
+                  borderRadius: '10px', 
+                  border: '1px solid #dcdde1', 
+                  fontSize: '0.95rem', 
+                  boxSizing: 'border-box',
+                  background: '#fcfcfc',
+                  outline: 'none'
+                }}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              style={{ 
+                background: 'linear-gradient(135deg, #3742fa, #5352ed)', 
+                color: '#fff', 
+                border: 'none', 
+                padding: '14px', 
+                borderRadius: '12px', 
+                fontSize: '0.95rem', 
+                fontWeight: 'bold', 
+                cursor: 'pointer', 
+                marginTop: '0.5rem', 
+                width: '100%',
+                boxSizing: 'border-box',
+                letterSpacing: '0.5px',
+                boxShadow: '0 4px 12px rgba(55, 66, 250, 0.3)'
+              }}
+            >
+              {loading ? 'SIGNING IN...' : 'SIGN IN'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
