@@ -30,10 +30,13 @@ export default function UpdateTeacherYearPlan() {
   useEffect(() => {
     axios.get(`${apiHost}/api/teachers`)
       .then(res => {
-        setTeachers(res.data.teachers || res.data || []);
+        const fetchedTeachers = res.data.teachers || res.data || [];
+        console.log('📌 Fetched Teachers from API:', fetchedTeachers);
+        setTeachers(fetchedTeachers);
       })
       .catch(err => {
         console.error('Error fetching registered teachers:', err);
+        setMessage('❌ Failed to load registered teachers from server.');
       });
   }, [apiHost]);
 
@@ -66,7 +69,8 @@ export default function UpdateTeacherYearPlan() {
         .catch(err => {
           console.error('Error loading plan:', err);
           setYearPlan([]);
-          setMessage('❌ Year plan data not found or failed to load for this selection.');
+          const serverErrorMsg = err.response?.data?.error || err.response?.data?.message || err.message;
+          setMessage(`❌ Year plan data not found or failed to load: ${serverErrorMsg}`);
           setLoading(false);
         });
     } else {
@@ -77,6 +81,7 @@ export default function UpdateTeacherYearPlan() {
   const handleTeacherChange = (e) => {
     const teacherName = e.target.value;
     const found = teachers.find(t => t.teacherName === teacherName);
+    console.log('📌 Selected Teacher Object:', found);
     setSelectedTeacherObj(found || null);
     setSelectedBlock('');
     setSelectedSubject('');
@@ -192,6 +197,9 @@ export default function UpdateTeacherYearPlan() {
     };
   };
 
+  // Safe checks for assignments arrays
+  const assignmentsList = selectedTeacherObj?.assignments || [];
+
   return (
     <div style={{ padding: '2rem', fontFamily: 'Segoe UI, sans-serif', maxWidth: '1400px', margin: '0 auto' }}>
       <h2>📝 Teacher Year Plan Management</h2>
@@ -214,7 +222,7 @@ export default function UpdateTeacherYearPlan() {
             disabled={!selectedTeacherObj}
           >
             <option value="">Select Block</option>
-            {selectedTeacherObj?.assignments?.map((a, i) => <option key={i} value={a.blockName}>{a.blockName}</option>)}
+            {assignmentsList.map((a, i) => <option key={i} value={a.blockName}>{a.blockName}</option>)}
           </select>
         </div>
 
@@ -227,7 +235,7 @@ export default function UpdateTeacherYearPlan() {
             disabled={!selectedBlock}
           >
             <option value="">Select Subject</option>
-            {selectedTeacherObj?.assignments
+            {assignmentsList
               ?.filter(a => a.blockName === selectedBlock)
               ?.map((a, i) => <option key={i} value={a.subject}>{a.subject}</option>)}
           </select>
@@ -242,7 +250,7 @@ export default function UpdateTeacherYearPlan() {
             disabled={!selectedSubject}
           >
             <option value="">Select Grade</option>
-            {selectedTeacherObj?.assignments
+            {assignmentsList
               ?.filter(a => a.blockName === selectedBlock && a.subject === selectedSubject)
               ?.[0]?.grades?.map((g, i) => <option key={i} value={g}>{g}</option>)}
           </select>
