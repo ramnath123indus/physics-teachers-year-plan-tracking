@@ -14,42 +14,54 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Dynamically uses VITE_API_URL environment variable, or falls back intelligently
+  const apiHost = (
+    import.meta.env.VITE_API_URL || 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5000'
+      : 'https://physics-teachers-year-plan-tracking-1.onrender.com')
+  ).replace(/\/+$/, '');
+
   // Fetch registered teachers on mount
   useEffect(() => {
-    const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     axios.get(`${apiHost}/api/teachers`)
       .then(res => {
-        setTeachers(res.data.teachers || res.data || []);
+        const fetchedTeachers = res.data.teachers || res.data || [];
+        setTeachers(fetchedTeachers);
       })
       .catch(err => {
         console.error('Error fetching registered teachers:', err);
+        setMessage('❌ Failed to load registered teachers from server.');
       });
-  }, []);
+  }, [apiHost]);
 
   // Automatically fetch Excel sheet when all filters are selected
   useEffect(() => {
     if (selectedTeacherObj && selectedBlock && selectedSubject && selectedGrade) {
-      const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const gradeQuery = selectedGrade.replace('Grade ', '');
+      const gradeQuery = String(selectedGrade).replace(/Grade\s*/i, '').trim();
 
       setLoading(true);
       setMessage('');
 
-      axios.get(`${apiHost}/api/master-plans/submit?blockName=${selectedBlock}&subject=${selectedSubject}&grade=${gradeQuery}`)
+      const teacherParam = selectedTeacherObj.teacherName ? `&teacherName=${encodeURIComponent(selectedTeacherObj.teacherName)}` : '';
+
+      axios.get(`${apiHost}/api/master-plans/submit?blockName=${encodeURIComponent(selectedBlock)}&subject=${encodeURIComponent(selectedSubject)}&grade=${encodeURIComponent(gradeQuery)}${teacherParam}`)
         .then(res => {
-          setYearPlan(res.data.yearPlan || []);
+          const fetchedPlan = res.data.yearPlan || res.data || [];
+          setYearPlan(fetchedPlan);
           setLoading(false);
         })
         .catch(err => {
           console.error('Error loading plan:', err);
           setYearPlan([]);
-          setMessage('❌ Excel file not found or failed to load for this selection.');
+          const serverErrorMsg = err.response?.data?.error || err.response?.data?.message || err.message;
+          setMessage(`❌ Excel file not found or failed to load: ${serverErrorMsg}`);
           setLoading(false);
         });
     } else {
       setYearPlan([]);
     }
-  }, [selectedTeacherObj, selectedBlock, selectedSubject, selectedGrade]);
+  }, [apiHost, selectedTeacherObj, selectedBlock, selectedSubject, selectedGrade]);
 
   const handleTeacherChange = (e) => {
     const teacherName = e.target.value;
@@ -124,9 +136,11 @@ export default function TeacherDashboard() {
     XLSX.writeFile(workbook, fileName);
   };
 
+  const assignmentsList = selectedTeacherObj?.assignments || [];
+
   return (
     <div style={{ padding: '2rem', fontFamily: 'Segoe UI, sans-serif', maxWidth: '1400px', margin: '0 auto' }}>
-      <h2>Teacher Year Plan Dashboard</h2>
+      <h2>Teacher Year Plan Dashboard (View Only)</h2>
 
       {/* Dropdown Selection Filters */}
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', flexWrap: 'wrap', alignItems: 'center', background: '#f8f9fa', padding: '1.5rem', borderRadius: '8px', border: '1px solid #dfe6e9' }}>
@@ -148,7 +162,7 @@ export default function TeacherDashboard() {
             disabled={!selectedTeacherObj}
           >
             <option value="">Select Block</option>
-            {selectedTeacherObj?.assignments?.map((a, i) => <option key={i} value={a.blockName}>{a.blockName}</option>)}
+            {assignmentsList.map((a, i) => <option key={i} value={a.blockName}>{a.blockName}</option>)}
           </select>
         </div>
 
@@ -161,7 +175,7 @@ export default function TeacherDashboard() {
             disabled={!selectedBlock}
           >
             <option value="">Select Subject</option>
-            {selectedTeacherObj?.assignments
+            {assignmentsList
               ?.filter(a => a.blockName === selectedBlock)
               ?.map((a, i) => <option key={i} value={a.subject}>{a.subject}</option>)}
           </select>
@@ -176,7 +190,7 @@ export default function TeacherDashboard() {
             disabled={!selectedSubject}
           >
             <option value="">Select Grade</option>
-            {selectedTeacherObj?.assignments
+            {assignmentsList
               ?.filter(a => a.blockName === selectedBlock && a.subject === selectedSubject)
               ?.[0]?.grades?.map((g, i) => <option key={i} value={g}>{g}</option>)}
           </select>
@@ -193,7 +207,7 @@ export default function TeacherDashboard() {
             </p>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '5px' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#333' }}>Assigned Classes:</span>
-              {selectedTeacherObj.assignments?.map((a, idx) => (
+              {assignmentsList.map((a, idx) => (
                 <span key={idx} style={{ background: '#b3e5fc', color: '#01579b', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem', fontWeight: '600' }}>
                   {a.blockName} - {a.subject} ({a.grades?.join(', ')})
                 </span>
@@ -261,7 +275,7 @@ export default function TeacherDashboard() {
             </div>
           </div>
 
-          {/* Table Container */}
+          {/* Read-Only Table Container */}
           <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
               <thead>
