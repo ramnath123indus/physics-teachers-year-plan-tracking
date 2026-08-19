@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 
+const STANDARD_MONTHS = [
+  'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 
+  'NOVEMBER', 'DECEMBER', 'JANUARY', 'FEBRUARY', 'MARCH'
+];
+
 export default function UpdateTeacherYearPlan() {
   const [teachers, setTeachers] = useState([]);
   const [selectedTeacherObj, setSelectedTeacherObj] = useState(null);
@@ -40,7 +45,7 @@ export default function UpdateTeacherYearPlan() {
       });
   }, [apiHost]);
 
-  // Fetch Year Plan data when all filters are selected
+  // Fetch Year Plan data when all filters are selected (with auto-padding for full 10 months)
   useEffect(() => {
     if (selectedTeacherObj && selectedBlock && selectedSubject && selectedGrade) {
       const gradeQuery = String(selectedGrade).replace(/Grade\s*/i, '').trim();
@@ -53,24 +58,54 @@ export default function UpdateTeacherYearPlan() {
       axios.get(`${apiHost}/api/master-plans/submit?blockName=${encodeURIComponent(selectedBlock)}&subject=${encodeURIComponent(selectedSubject)}&grade=${encodeURIComponent(gradeQuery)}${teacherParam}`)
         .then(res => {
           const fetchedPlan = res.data.yearPlan || res.data || [];
-          const processedPlan = fetchedPlan.map(row => ({
-            ...row,
-            status: row.status && row.status.trim() !== '' ? row.status : 'NONE',
-            section1: row.section1 && row.section1.trim() !== '' ? row.section1 : 'NOT ASSIGNED',
-            section2: row.section2 && row.section2.trim() !== '' ? row.section2 : 'NOT ASSIGNED',
-            section3: row.section3 && row.section3.trim() !== '' ? row.section3 : 'NOT ASSIGNED',
-            section4: row.section4 && row.section4.trim() !== '' ? row.section4 : 'NOT ASSIGNED',
-            section5: row.section5 && row.section5.trim() !== '' ? row.section5 : 'NOT ASSIGNED',
-            section6: row.section6 && row.section6.trim() !== '' ? row.section6 : 'NOT ASSIGNED'
-          }));
+          
+          // Map fetched data by month for easy lookup
+          const planMap = {};
+          fetchedPlan.forEach(row => {
+            if (row.month) {
+              planMap[row.month.trim().toUpperCase()] = row;
+            }
+          });
+
+          // Ensure all standard months exist so empty blocks don't truncate to 1 row
+          const processedPlan = STANDARD_MONTHS.map(monthName => {
+            const existingRow = planMap[monthName] || fetchedPlan[STANDARD_MONTHS.indexOf(monthName)] || {};
+            return {
+              ...existingRow,
+              month: monthName,
+              ncertSyllabus: existingRow.ncertSyllabus || '',
+              assessments: existingRow.assessments || '',
+              iitSyllabus: existingRow.iitSyllabus || '',
+              status: existingRow.status && existingRow.status.trim() !== '' ? existingRow.status : 'NONE',
+              section1: existingRow.section1 && existingRow.section1.trim() !== '' ? existingRow.section1 : 'NOT ASSIGNED',
+              section2: existingRow.section2 && existingRow.section2.trim() !== '' ? existingRow.section2 : 'NOT ASSIGNED',
+              section3: existingRow.section3 && existingRow.section3.trim() !== '' ? existingRow.section3 : 'NOT ASSIGNED',
+              section4: existingRow.section4 && existingRow.section4.trim() !== '' ? existingRow.section4 : 'NOT ASSIGNED',
+              section5: existingRow.section5 && existingRow.section5.trim() !== '' ? existingRow.section5 : 'NOT ASSIGNED',
+              section6: existingRow.section6 && existingRow.section6.trim() !== '' ? existingRow.section6 : 'NOT ASSIGNED'
+            };
+          });
+
           setYearPlan(processedPlan);
           setLoading(false);
         })
         .catch(err => {
           console.error('Error loading plan:', err);
-          setYearPlan([]);
-          const serverErrorMsg = err.response?.data?.error || err.response?.data?.message || err.message;
-          setMessage(`❌ Year plan data not found or failed to load: ${serverErrorMsg}`);
+          // Fallback: If fetch fails or returns 404, generate a clean 10-month empty layout anyway
+          const fallbackPlan = STANDARD_MONTHS.map(monthName => ({
+            month: monthName,
+            ncertSyllabus: '',
+            assessments: '',
+            iitSyllabus: '',
+            status: 'NONE',
+            section1: 'NOT ASSIGNED',
+            section2: 'NOT ASSIGNED',
+            section3: 'NOT ASSIGNED',
+            section4: 'NOT ASSIGNED',
+            section5: 'NOT ASSIGNED',
+            section6: 'NOT ASSIGNED'
+          }));
+          setYearPlan(fallbackPlan);
           setLoading(false);
         });
     } else {
@@ -314,7 +349,11 @@ export default function UpdateTeacherYearPlan() {
                     <tr key={index} style={{ borderBottom: '1px solid #ddd', background: rowBg }}>
                       <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{index + 1}</td>
                       
-                      {['month', 'ncertSyllabus', 'assessments', 'iitSyllabus'].map((field) => (
+                      <td style={{ padding: '6px', border: '1px solid #ddd', fontWeight: 'bold', background: '#f9f9f9' }}>
+                        {row.month}
+                      </td>
+
+                      {['ncertSyllabus', 'assessments', 'iitSyllabus'].map((field) => (
                         <td key={field} style={{ padding: '6px', border: '1px solid #ddd' }}>
                           <input 
                             type="text" 
