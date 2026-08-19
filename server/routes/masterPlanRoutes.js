@@ -5,81 +5,114 @@ import XLSX from 'xlsx';
 
 const router = express.Router();
 
+// Standard 10 months academic layout for fallback/auto-creation
+const STANDARD_MONTHS = [
+  'June', 'July', 'August', 'September', 'October', 
+  'November', 'December', 'January', 'February', 'March'
+];
+
 // Bulletproof path resolution
 let EXCEL_DIR = path.join(process.cwd(), 'server', 'master-excel-files');
 if (!fs.existsSync(EXCEL_DIR)) {
   EXCEL_DIR = path.join(process.cwd(), 'master-excel-files');
 }
 
-// Helper to resolve files
+// Helper to resolve/create files with case-insensitive check for Kailash & others
 function getExcelFilePath(blockName, subject, grade) {
-  const safeSubject = (subject || '').toString().trim();
+  const safeBlock = (blockName || '').toString().trim().toUpperCase();
+  const safeSubject = (subject || '').toString().trim().toUpperCase();
   const safeGrade = (grade || '').toString().replace(/^Grade\s*/i, '').trim();
   
-  if (!fs.existsSync(EXCEL_DIR)) return '';
+  if (!fs.existsSync(EXCEL_DIR)) fs.mkdirSync(EXCEL_DIR, { recursive: true });
 
   const files = fs.readdirSync(EXCEL_DIR);
 
+  // Flexible search matching block name, subject, and grade regardless of casing or spacing
   let matchedFile = files.find(f => {
     const upperF = f.toUpperCase();
-    return upperF.includes(safeSubject.toUpperCase()) && 
+    return upperF.includes(safeBlock) && 
+           upperF.includes(safeSubject) && 
            upperF.includes(safeGrade) && 
            upperF.endsWith('.xlsx');
   });
 
   if (matchedFile) return path.join(EXCEL_DIR, matchedFile);
 
-  const fallbackName = blockName && blockName.toUpperCase() === 'KAILASH' 
-    ? `KAILASH_${safeSubject}_Grade ${safeGrade}.xlsx` 
-    : `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
+  // Fallback filename if file doesn't exist yet
+  const fallbackName = safeBlock === 'KAILASH' 
+    ? `KAILASH_${subject}_Grade ${safeGrade}.xlsx` 
+    : `${blockName || 'General'}_${subject}_Grade ${safeGrade}.xlsx`;
     
   return path.join(EXCEL_DIR, fallbackName);
 }
 
-// GET plan data
+// GET plan data (Dashboard)
 router.get('/submit', (req, res) => {
-  const { blockName, subject, grade } = req.query;
-  const filePath = getExcelFilePath(blockName, subject, grade);
+  try {
+    const { blockName, subject, grade } = req.query;
+    if (!blockName || !subject || !grade) {
+      return res.status(400).json({ error: 'Missing parameters' });
+    }
 
-  if (!fs.existsSync(filePath)) {
-    try {
-      const emptyData = [{ 'MONTH': 'June', 'NCERT SYLLABUS': '', 'ASSESSMENTS': '', 'IIT SYLLABUS': '', 'SECTION-1': 'Not Assigned', 'SECTION-2': 'Not Assigned', 'SECTION-3': 'Not Assigned', 'SECTION-4': 'Not Assigned', 'SECTION-5': 'Not Assigned', 'SECTION-6': 'Not Assigned', 'STATUS': 'Not Assigned' }];
+    const filePath = getExcelFilePath(blockName, subject, grade);
+
+    // If file doesn't exist, create it with all 10 standard months template
+    if (!fs.existsSync(filePath)) {
+      const emptyData = STANDARD_MONTHS.map(m => ({
+        'MONTH': m,
+        'NCERT SYLLABUS': '',
+        'ASSESSMENTS': '',
+        'IIT SYLLABUS': '',
+        'SECTION-1': 'Not Assigned',
+        'SECTION-2': 'Not Assigned',
+        'SECTION-3': 'Not Assigned',
+        'SECTION-4': 'Not Assigned',
+        'SECTION-5': 'Not Assigned',
+        'SECTION-6': 'Not Assigned',
+        'STATUS': 'Not Assigned'
+      }));
       const newWb = XLSX.utils.book_new();
       const newWs = XLSX.utils.json_to_sheet(emptyData);
       XLSX.utils.book_append_sheet(newWb, newWs, 'YearPlan');
-      if (!fs.existsSync(EXCEL_DIR)) fs.mkdirSync(EXCEL_DIR, { recursive: true });
       XLSX.writeFile(newWb, filePath);
-    } catch (createErr) {
-      return res.status(404).json({ error: `Excel file not found` });
     }
-  }
 
-  try {
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    const yearPlan = sheetData.map(row => ({
-      month: row['MONTH'] || '',
-      ncertSyllabus: row['NCERT SYLLABUS'] || '',
-      assessments: row['ASSESSMENTS'] || '',
-      iitSyllabus: row['IIT SYLLABUS'] || '',
-      section1: row['SECTION-1'] || 'Not Assigned',
-      section2: row['SECTION-2'] || 'Not Assigned',
-      section3: row['SECTION-3'] || 'Not Assigned',
-      section4: row['SECTION-4'] || 'Not Assigned',
-      section5: row['SECTION-5'] || 'Not Assigned',
-      section6: row['SECTION-6'] || 'Not Assigned',
-      status: row['STATUS'] || 'Not Assigned'
-    }));
+    // Map data to match frontend requirements, ensuring all standard months are covered
+    const planMap = {};
+    sheetData.forEach(row => {
+      const mKey = (row['MONTH'] || '').toString().trim().toUpperCase();
+      if (mKey) planMap[mKey] = row;
+    });
+
+    const yearPlan = STANDARD_MONTHS.map(mName => {
+      const row = planMap[mName.toUpperCase()] || {};
+      return {
+        month: mName,
+        ncertSyllabus: row['NCERT SYLLABUS'] || '',
+        assessments: row['ASSESSMENTS'] || '',
+        iitSyllabus: row['IIT SYLLABUS'] || '',
+        section1: row['SECTION-1'] || 'Not Assigned',
+        section2: row['SECTION-2'] || 'Not Assigned',
+        section3: row['SECTION-3'] || 'Not Assigned',
+        section4: row['SECTION-4'] || 'Not Assigned',
+        section5: row['SECTION-5'] || 'Not Assigned',
+        section6: row['SECTION-6'] || 'Not Assigned',
+        status: row['STATUS'] || 'Not Assigned'
+      };
+    });
 
     res.json({ yearPlan });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to read excel file' });
+    console.error('Error in /submit:', err);
+    res.status(500).json({ error: 'Failed to read/create excel file' });
   }
 });
 
-// POST Update plan data back to Excel file
+// POST Update plan data
 router.post('/update', (req, res) => {
   const { blockName, subject, grade, yearPlan } = req.body;
   const filePath = getExcelFilePath(blockName, subject, grade);
@@ -101,35 +134,11 @@ router.post('/update', (req, res) => {
 
     const newWorkbook = XLSX.utils.book_new();
     const newSheet = XLSX.utils.json_to_sheet(sheetData);
-
-    // Apply data validations
-    const range = XLSX.utils.decode_range(newSheet['!ref'] || 'A1:K2');
-    newSheet['!data_validations'] = [];
-    const targetHeaders = ['SECTION-1', 'SECTION-2', 'SECTION-3', 'SECTION-4', 'SECTION-5', 'SECTION-6', 'STATUS'];
-
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      const cellAddress = XLSX.utils.encode_cell({ r: range.s.r, c: C });
-      const cellVal = newSheet[cellAddress] ? newSheet[cellAddress].v : '';
-      if (targetHeaders.includes(cellVal)) {
-        const colLetter = XLSX.utils.encode_col(C);
-        newSheet['!data_validations'].push({
-          sqref: `${colLetter}2:${colLetter}${Math.max(range.e.r + 1, 50)}`,
-          type: 'list',
-          formula1: '"Not Assigned,In Process,Completed"',
-          allowBlank: true,
-          showDropDown: true
-        });
-      }
-    }
-
     XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'YearPlan');
-    if (!fs.existsSync(path.dirname(filePath))) fs.mkdirSync(path.dirname(filePath), { recursive: true });
     
     XLSX.writeFile(newWorkbook, filePath);
-
-    res.status(200).json({ success: true, message: 'Year plan updated successfully' });
+    res.status(200).json({ success: true, message: 'Plan updated' });
   } catch (err) {
-    console.error('Error updating excel file:', err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
