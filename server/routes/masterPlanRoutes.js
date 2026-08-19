@@ -5,29 +5,25 @@ import XLSX from 'xlsx';
 
 const router = express.Router();
 
-// Standard 10 months academic layout for fallback/auto-creation
-const STANDARD_MONTHS = [
-  'June', 'July', 'August', 'September', 'October', 
-  'November', 'December', 'January', 'February', 'March'
-];
-
-// Bulletproof path resolution
+// Bulletproof path resolution for your uploaded excel files directory
 let EXCEL_DIR = path.join(process.cwd(), 'server', 'master-excel-files');
 if (!fs.existsSync(EXCEL_DIR)) {
   EXCEL_DIR = path.join(process.cwd(), 'master-excel-files');
 }
 
-// Helper to resolve/create files with case-insensitive check for Kailash & others
-function getExcelFilePath(blockName, subject, grade) {
+// Helper to precisely find your existing stored Excel files
+function getExistingExcelFilePath(blockName, subject, grade) {
   const safeBlock = (blockName || '').toString().trim().toUpperCase();
   const safeSubject = (subject || '').toString().trim().toUpperCase();
   const safeGrade = (grade || '').toString().replace(/^Grade\s*/i, '').trim();
   
-  if (!fs.existsSync(EXCEL_DIR)) fs.mkdirSync(EXCEL_DIR, { recursive: true });
+  if (!fs.existsSync(EXCEL_DIR)) {
+    fs.mkdirSync(EXCEL_DIR, { recursive: true });
+  }
 
   const files = fs.readdirSync(EXCEL_DIR);
 
-  // Flexible search matching block name, subject, and grade regardless of casing or spacing
+  // Search for the file containing the block name, subject, and grade among your existing files
   let matchedFile = files.find(f => {
     const upperF = f.toUpperCase();
     return upperF.includes(safeBlock) && 
@@ -36,17 +32,15 @@ function getExcelFilePath(blockName, subject, grade) {
            upperF.endsWith('.xlsx');
   });
 
-  if (matchedFile) return path.join(EXCEL_DIR, matchedFile);
+  if (matchedFile) {
+    return path.join(EXCEL_DIR, matchedFile);
+  }
 
-  // Fallback filename if file doesn't exist yet
-  const fallbackName = safeBlock === 'KAILASH' 
-    ? `KAILASH_${subject}_Grade ${safeGrade}.xlsx` 
-    : `${blockName || 'General'}_${subject}_Grade ${safeGrade}.xlsx`;
-    
-  return path.join(EXCEL_DIR, fallbackName);
+  // Fallback pattern if exact match isn't found
+  return path.join(EXCEL_DIR, `${blockName}_${subject}_Grade ${safeGrade}.xlsx`);
 }
 
-// GET plan data (Dashboard)
+// GET plan data (Dashboard) - reads from your existing files
 router.get('/submit', (req, res) => {
   try {
     const { blockName, subject, grade } = req.query;
@@ -54,68 +48,44 @@ router.get('/submit', (req, res) => {
       return res.status(400).json({ error: 'Missing parameters' });
     }
 
-    const filePath = getExcelFilePath(blockName, subject, grade);
+    const filePath = getExistingExcelFilePath(blockName, subject, grade);
 
-    // If file doesn't exist, create it with all 10 standard months template
+    // If the file physically doesn't exist in server/master-excel-files, return 404 
+    // so it doesn't silently create dummy files for missing records.
     if (!fs.existsSync(filePath)) {
-      const emptyData = STANDARD_MONTHS.map(m => ({
-        'MONTH': m,
-        'NCERT SYLLABUS': '',
-        'ASSESSMENTS': '',
-        'IIT SYLLABUS': '',
-        'SECTION-1': 'Not Assigned',
-        'SECTION-2': 'Not Assigned',
-        'SECTION-3': 'Not Assigned',
-        'SECTION-4': 'Not Assigned',
-        'SECTION-5': 'Not Assigned',
-        'SECTION-6': 'Not Assigned',
-        'STATUS': 'Not Assigned'
-      }));
-      const newWb = XLSX.utils.book_new();
-      const newWs = XLSX.utils.json_to_sheet(emptyData);
-      XLSX.utils.book_append_sheet(newWb, newWs, 'YearPlan');
-      XLSX.writeFile(newWb, filePath);
+      return res.status(404).json({ error: `Excel file for block '${blockName}' and subject '${subject}' was not found in server/master-excel-files.` });
     }
 
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    // Map data to match frontend requirements, ensuring all standard months are covered
-    const planMap = {};
-    sheetData.forEach(row => {
-      const mKey = (row['MONTH'] || '').toString().trim().toUpperCase();
-      if (mKey) planMap[mKey] = row;
-    });
-
-    const yearPlan = STANDARD_MONTHS.map(mName => {
-      const row = planMap[mName.toUpperCase()] || {};
-      return {
-        month: mName,
-        ncertSyllabus: row['NCERT SYLLABUS'] || '',
-        assessments: row['ASSESSMENTS'] || '',
-        iitSyllabus: row['IIT SYLLABUS'] || '',
-        section1: row['SECTION-1'] || 'Not Assigned',
-        section2: row['SECTION-2'] || 'Not Assigned',
-        section3: row['SECTION-3'] || 'Not Assigned',
-        section4: row['SECTION-4'] || 'Not Assigned',
-        section5: row['SECTION-5'] || 'Not Assigned',
-        section6: row['SECTION-6'] || 'Not Assigned',
-        status: row['STATUS'] || 'Not Assigned'
-      };
-    });
+    // Map data from your stored excel file to frontend requirements
+    const yearPlan = sheetData.map(row => ({
+      month: row['MONTH'] || row['Month'] || '',
+      ncertSyllabus: row['NCERT SYLLABUS'] || row['NCERT Syllabus'] || '',
+      assessments: row['ASSESSMENTS'] || row['Assessments'] || '',
+      iitSyllabus: row['IIT SYLLABUS'] || row['IIT Syllabus'] || '',
+      section1: row['SECTION-1'] || row['Section-1'] || 'Not Assigned',
+      section2: row['SECTION-2'] || row['Section-2'] || 'Not Assigned',
+      section3: row['SECTION-3'] || row['Section-3'] || 'Not Assigned',
+      section4: row['SECTION-4'] || row['Section-4'] || 'Not Assigned',
+      section5: row['SECTION-5'] || 'Not Assigned',
+      section6: row['SECTION-6'] || row['Section-6'] || 'Not Assigned',
+      status: row['STATUS'] || row['Status'] || 'Not Assigned'
+    }));
 
     res.json({ yearPlan });
   } catch (err) {
-    console.error('Error in /submit:', err);
-    res.status(500).json({ error: 'Failed to read/create excel file' });
+    console.error('Error reading stored excel file:', err);
+    res.status(500).json({ error: 'Failed to read excel file from server' });
   }
 });
 
-// POST Update plan data
+// POST Update plan data (Modifies your existing file)
 router.post('/update', (req, res) => {
   const { blockName, subject, grade, yearPlan } = req.body;
-  const filePath = getExcelFilePath(blockName, subject, grade);
+  const filePath = getExistingExcelFilePath(blockName, subject, grade);
 
   try {
     const sheetData = yearPlan.map(row => ({
@@ -137,7 +107,7 @@ router.post('/update', (req, res) => {
     XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'YearPlan');
     
     XLSX.writeFile(newWorkbook, filePath);
-    res.status(200).json({ success: true, message: 'Plan updated' });
+    res.status(200).json({ success: true, message: 'Existing Excel file updated successfully' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
