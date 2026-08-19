@@ -16,57 +16,63 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Top Header / Navigation Bar */}
-      <nav style={{ background: '#0984e3', padding: '15px 30px', display: 'flex', gap: '15px', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.15)', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+      {/* Top Header / Navigation Bar with Distinct Colorful Buttons */}
+      <nav style={{ background: '#2d3436', padding: '15px 30px', display: 'flex', gap: '15px', alignItems: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.15)', flexWrap: 'wrap', justifyContent: 'space-between' }}>
         
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <h2 style={{ color: '#fff', margin: 0, fontSize: '1.2rem', marginRight: '10px' }}>📚 Teachers Year Plan Tracking</h2>
           
           {/* Navigation Options for Admin & Teacher */}
           {(user.role === 'admin' || user.role === 'teacher') && (
             <>
+              {/* Teacher Registration Button - Teal / Emerald Theme */}
               <button
                 onClick={() => setCurrentView('registration')}
                 style={{
-                  background: currentView === 'registration' ? '#d63031' : 'transparent',
+                  background: currentView === 'registration' ? '#00b894' : '#00cec9',
                   color: '#fff',
-                  border: '2px solid #fff',
-                  padding: '8px 14px',
+                  border: 'none',
+                  padding: '9px 16px',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontWeight: 'bold',
+                  boxShadow: currentView === 'registration' ? '0 0 8px rgba(0,184,148,0.6)' : 'none',
                   transition: 'all 0.2s'
                 }}
               >
                 👤 Teacher Registration
               </button>
 
+              {/* Manage Teachers Button - Blue Theme */}
               <button
                 onClick={() => setCurrentView('manage-teachers')}
                 style={{
-                  background: currentView === 'manage-teachers' ? '#d63031' : 'transparent',
+                  background: currentView === 'manage-teachers' ? '#0984e3' : '#74b9ff',
                   color: '#fff',
-                  border: '2px solid #fff',
-                  padding: '8px 14px',
+                  border: 'none',
+                  padding: '9px 16px',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontWeight: 'bold',
+                  boxShadow: currentView === 'manage-teachers' ? '0 0 8px rgba(9,132,227,0.6)' : 'none',
                   transition: 'all 0.2s'
                 }}
               >
                 ✏️ Manage Teachers
               </button>
 
+              {/* Update Year Plan Button - Orange / Amber Theme */}
               <button
                 onClick={() => setCurrentView('plan')}
                 style={{
-                  background: currentView === 'plan' ? '#e74c3c' : 'transparent',
+                  background: currentView === 'plan' ? '#e17055' : '#fab1a0',
                   color: '#fff',
-                  border: '2px solid #fff',
-                  padding: '8px 14px',
+                  border: 'none',
+                  padding: '9px 16px',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontWeight: 'bold',
+                  boxShadow: currentView === 'plan' ? '0 0 8px rgba(225,112,85,0.6)' : 'none',
                   transition: 'all 0.2s'
                 }}
               >
@@ -75,18 +81,19 @@ export default function App() {
             </>
           )}
 
-          {/* Admin Only Navigation Option */}
+          {/* Admin Only Navigation Option - Purple Theme */}
           {user.role === 'admin' && (
             <button
               onClick={() => setCurrentView('dashboard')}
               style={{
-                background: currentView === 'dashboard' ? '#c0392b' : 'transparent',
+                background: currentView === 'dashboard' ? '#6c5ce7' : '#a29bfe',
                 color: '#fff',
-                border: '2px solid #fff',
-                padding: '8px 14px',
+                border: 'none',
+                padding: '9px 16px',
                 borderRadius: '6px',
                 cursor: 'pointer',
                 fontWeight: 'bold',
+                boxShadow: currentView === 'dashboard' ? '0 0 8px rgba(108,92,231,0.6)' : 'none',
                 transition: 'all 0.2s'
               }}
             >
@@ -97,7 +104,7 @@ export default function App() {
 
         {/* User Info & Logout Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '0.9rem', background: '#2d3436', color: '#fff', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold' }}>
+          <span style={{ fontSize: '0.9rem', background: '#636e72', color: '#fff', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold' }}>
             Role: {user.role.toUpperCase()}
           </span>
           <button 
