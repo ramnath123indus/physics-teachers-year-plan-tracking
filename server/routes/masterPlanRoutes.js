@@ -21,19 +21,25 @@ function getExistingExcelFilePath(blockName, subject, grade) {
 
   let fileName = '';
 
+  // Rule for Kailash block (Physics, Biology, and Chemistry specific naming)
   if (safeBlock.toUpperCase() === 'KAILASH') {
     if (safeSubject === 'PHYSICS') {
       fileName = `Kailash_PHYSICS_Grade ${safeGrade}.xlsx`;
     } else if (safeSubject === 'BIOLOGY') {
       fileName = `Kailash_BIOLOGY_Grade ${safeGrade}.xlsx`;
+    } else if (safeSubject === 'CHEMISTRY') {
+      fileName = `Kailash_CHEMISTRY_Grade ${safeGrade}.xlsx`;
     } else {
       fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
     }
   } else {
+    // Rule for all other blocks (General, Nilgiri, Aravalli, etc.)
     if (safeSubject === 'PHYSICS') {
       fileName = `General_PHYSICS_Grade ${safeGrade}.xlsx`;
     } else if (safeSubject === 'BIOLOGY') {
       fileName = `General_BIOLOGY_Grade ${safeGrade}.xlsx`;
+    } else if (safeSubject === 'CHEMISTRY') {
+      fileName = `General_CHEMISTRY_Grade ${safeGrade}.xlsx`;
     } else {
       fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
     }
@@ -42,7 +48,7 @@ function getExistingExcelFilePath(blockName, subject, grade) {
   return path.join(EXCEL_DIR, fileName);
 }
 
-// GET plan data with explicit sheet name handling for Biology ('Year Plan')
+// GET plan data with sheet name support ('Year Plan')
 router.get('/submit', (req, res) => {
   try {
     const { blockName, subject, grade } = req.query;
@@ -57,15 +63,14 @@ router.get('/submit', (req, res) => {
     }
 
     const workbook = XLSX.readFile(filePath);
-    
-    // Explicitly target 'Year Plan' sheet if it exists, otherwise fall back to index 0
     const targetSheetName = workbook.SheetNames.includes('Year Plan') 
       ? 'Year Plan' 
       : workbook.SheetNames[0];
       
     const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheetName], { defval: '' });
 
-    const isBiology = subject.toUpperCase() === 'BIOLOGY';
+    const upperSubject = subject.toUpperCase();
+    const isBiology = upperSubject === 'BIOLOGY';
 
     // Filter out completely blank months/rows
     const sheetData = rawData.filter(row => {
@@ -102,7 +107,8 @@ router.post('/update', (req, res) => {
   const filePath = getExistingExcelFilePath(blockName, subject, grade);
 
   try {
-    const isBiology = (subject || '').toUpperCase() === 'BIOLOGY';
+    const upperSubject = (subject || '').toUpperCase();
+    const isBiology = upperSubject === 'BIOLOGY';
     const fourthColumnHeader = isBiology ? 'NEET SYLLABUS' : 'IIT SYLLABUS';
 
     const sheetData = yearPlan.map(row => {
@@ -146,7 +152,6 @@ router.post('/update', (req, res) => {
 
     newSheet['!cols'] = colWidths.map(w => ({ wch: Math.max((w || 10) + 5, 22) }));
 
-    // Append using 'Year Plan' name for consistency
     XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'Year Plan');
     
     XLSX.writeFile(newWorkbook, filePath);
