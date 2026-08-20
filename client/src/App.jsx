@@ -16,8 +16,8 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8f9fa' }}>
-      {/* Top Header / Navigation Bar with Skyblue Background */}
-      <nav style={{ background: '#87ceeb', padding: '15px 30px', display: 'flex', gap: '15px', alignItems: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.1)', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+      {/* Top Header / Navigation Bar with Light Gray Background */}
+      <nav style={{ background: '#f1f2f6', padding: '15px 30px', display: 'flex', gap: '15px', alignItems: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.08)', flexWrap: 'wrap', justifyContent: 'space-between', borderBottom: '1px solid #dfe6e9' }}>
         
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
           <h2 style={{ color: '#2d3436', margin: 0, fontSize: '1.2rem', marginRight: '10px' }}>📚 Teachers Year Plan Tracking</h2>
@@ -47,8 +47,7 @@ export default function App() {
               <button
                 onClick={() => setCurrentView('manage-teachers')}
                 style={{
-                  background: currentView === 'manage-teachers' ? '#0984e3' : '#0984e3',
-                  opacity: currentView === 'manage-teachers' ? 1 : 0.85,
+                  background: currentView === 'manage-teachers' ? '#0984e3' : '#74b9ff',
                   color: '#fff',
                   border: 'none',
                   padding: '9px 16px',
