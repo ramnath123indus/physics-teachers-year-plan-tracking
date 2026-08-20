@@ -11,7 +11,7 @@ if (!fs.existsSync(EXCEL_DIR)) {
   EXCEL_DIR = path.join(process.cwd(), 'master-excel-files');
 }
 
-// Precise file resolver matching your specific naming rules for Kailash vs General blocks (Physics & Biology)
+// Precise file resolver matching your specific naming rules for Kailash vs General blocks
 function getExistingExcelFilePath(blockName, subject, grade) {
   const safeBlock = (blockName || '').toString().trim();
   const safeSubject = (subject || '').toString().trim().toUpperCase();
@@ -33,7 +33,6 @@ function getExistingExcelFilePath(blockName, subject, grade) {
       fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
     }
   } else {
-    // Rule for all other blocks (General, Nilgiri, Aravalli, etc.)
     if (safeSubject === 'PHYSICS') {
       fileName = `General_PHYSICS_Grade ${safeGrade}.xlsx`;
     } else if (safeSubject === 'BIOLOGY') {
@@ -68,7 +67,7 @@ router.get('/submit', (req, res) => {
       month: row['MONTH'] || row['Month'] || '',
       ncertSyllabus: row['NCERT SYLLABUS'] || row['NCERT Syllabus'] || '',
       assessments: row['ASSESSMENTS'] || row['Assessments'] || '',
-      iitSyllabus: row['IIT SYLLABUS'] || row['IIT Syllabus'] || '',
+      iitSyllabus: row['IIT SYLLABUS'] || row['IIT Syllabus'] || row['IIT_SYLLABUS'] || '',
       section1: row['SECTION-1'] || row['Section-1'] || 'Not Assigned',
       section2: row['SECTION-2'] || row['Section-2'] || 'Not Assigned',
       section3: row['SECTION-3'] || row['Section-3'] || 'Not Assigned',
@@ -85,17 +84,18 @@ router.get('/submit', (req, res) => {
   }
 });
 
-// POST Update plan data with Auto-Fit & Full Cell Visibility
+// POST Update plan data with Explicit Column Ordering & Auto-Fit
 router.post('/update', (req, res) => {
   const { blockName, subject, grade, yearPlan } = req.body;
   const filePath = getExistingExcelFilePath(blockName, subject, grade);
 
   try {
+    // Map with explicit key ordering so 4th column "IIT SYLLABUS" is always in place
     const sheetData = yearPlan.map(row => ({
-      'MONTH': row.month,
-      'NCERT SYLLABUS': row.ncertSyllabus,
-      'ASSESSMENTS': row.assessments,
-      'IIT SYLLABUS': row.iitSyllabus,
+      'MONTH': row.month || '',
+      'NCERT SYLLABUS': row.ncertSyllabus || '',
+      'ASSESSMENTS': row.assessments || '',
+      'IIT SYLLABUS': row.iitSyllabus || '',
       'SECTION-1': row.section1 || 'Not Assigned',
       'SECTION-2': row.section2 || 'Not Assigned',
       'SECTION-3': row.section3 || 'Not Assigned',
@@ -125,14 +125,14 @@ router.post('/update', (req, res) => {
       }
     }
 
-    // Set generous width boundaries so cells are fully readable
+    // Set generous width boundaries so the 4th column and others are fully visible
     newSheet['!cols'] = colWidths.map(w => ({ wch: Math.max((w || 10) + 5, 22) }));
     // ----------------------------------------------
 
     XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'YearPlan');
     
     XLSX.writeFile(newWorkbook, filePath);
-    res.status(200).json({ success: true, message: 'Excel file updated successfully with full cell visibility' });
+    res.status(200).json({ success: true, message: 'Excel file updated successfully with all columns visible' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
