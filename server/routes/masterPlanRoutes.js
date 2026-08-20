@@ -11,9 +11,9 @@ if (!fs.existsSync(EXCEL_DIR)) {
 }
 
 function getExistingExcelFilePath(blockName, subject, grade) {
-  const safeBlock = (blockName || '').toString().trim();
-  const safeSubject = (subject || '').toString().trim().toUpperCase();
-  const safeGrade = (grade || '').toString().replace(/^Grade\s*/i, '').trim();
+  const safeBlock = (blockName || 'General').toString().trim();
+  const safeSubject = (subject || 'PHYSICS').toString().trim().toUpperCase();
+  const safeGrade = (grade || '10').toString().replace(/^Grade\s*/i, '').trim();
   
   if (!fs.existsSync(EXCEL_DIR)) {
     fs.mkdirSync(EXCEL_DIR, { recursive: true });
@@ -21,45 +21,42 @@ function getExistingExcelFilePath(blockName, subject, grade) {
 
   let fileName = '';
 
-  // Rule for Kailash block (Physics, Biology, and Chemistry specific naming)
   if (safeBlock.toUpperCase() === 'KAILASH') {
-    if (safeSubject === 'PHYSICS') {
-      fileName = `Kailash_PHYSICS_Grade ${safeGrade}.xlsx`;
-    } else if (safeSubject === 'BIOLOGY') {
-      fileName = `Kailash_BIOLOGY_Grade ${safeGrade}.xlsx`;
-    } else if (safeSubject === 'CHEMISTRY') {
-      fileName = `Kailash_CHEMISTRY_Grade ${safeGrade}.xlsx`;
-    } else {
-      fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
-    }
+    fileName = `Kailash_${safeSubject}_Grade ${safeGrade}.xlsx`;
   } else {
-    // Rule for all other blocks (General, Nilgiri, Aravalli, etc.)
-    if (safeSubject === 'PHYSICS') {
-      fileName = `General_PHYSICS_Grade ${safeGrade}.xlsx`;
-    } else if (safeSubject === 'BIOLOGY') {
-      fileName = `General_BIOLOGY_Grade ${safeGrade}.xlsx`;
-    } else if (safeSubject === 'CHEMISTRY') {
-      fileName = `General_CHEMISTRY_Grade ${safeGrade}.xlsx`;
-    } else {
-      fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
-    }
+    fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
   }
 
-  return path.join(EXCEL_DIR, fileName);
+  const primaryPath = path.join(EXCEL_DIR, fileName);
+  if (!fs.existsSync(primaryPath) && safeBlock.toUpperCase() === 'KAILASH') {
+    const generalPath = path.join(EXCEL_DIR, `General_${safeSubject}_Grade ${safeGrade}.xlsx`);
+    if (fs.existsSync(generalPath)) return generalPath;
+  }
+
+  return primaryPath;
 }
 
-// GET plan data with sheet name support ('Year Plan')
+function getFourthColumnHeader(subject) {
+  const upper = (subject || '').toUpperCase();
+  if (upper === 'BIOLOGY') return 'NEET SYLLABUS';
+  if (upper === 'CHEMISTRY') return 'JEE SYLLABUS';
+  return 'IIT SYLLABUS';
+}
+
 router.get('/submit', (req, res) => {
   try {
-    const { blockName, subject, grade } = req.query;
+    let { blockName, subject, grade } = req.query;
+
     if (!blockName || !subject || !grade) {
-      return res.status(400).json({ error: 'Missing parameters' });
+      blockName = blockName || 'General';
+      subject = subject || 'PHYSICS';
+      grade = grade || '10';
     }
 
     const filePath = getExistingExcelFilePath(blockName, subject, grade);
 
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: `Excel file '${path.basename(filePath)}' not found in server/master-excel-files.` });
+      return res.status(404).json({ error: `Excel file '${path.basename(filePath)}' not found on server.` });
     }
 
     const workbook = XLSX.readFile(filePath);
@@ -69,22 +66,18 @@ router.get('/submit', (req, res) => {
       
     const rawData = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheetName], { defval: '' });
 
-    const upperSubject = subject.toUpperCase();
-    const isBiology = upperSubject === 'BIOLOGY';
-
-    // Filter out completely blank months/rows
     const sheetData = rawData.filter(row => {
       const monthVal = row['MONTH'] || row['Month'] || '';
       return monthVal.toString().trim() !== '';
     });
 
+    const fourthColHeader = getFourthColumnHeader(subject);
+
     const yearPlan = sheetData.map(row => ({
       month: row['MONTH'] || row['Month'] || '',
       ncertSyllabus: row['NCERT SYLLABUS'] || row['NCERT Syllabus'] || '',
       assessments: row['ASSESSMENTS'] || row['Assessments'] || '',
-      iitSyllabus: isBiology 
-        ? (row['NEET SYLLABUS'] || row['NEET Syllabus'] || row['NEET_SYLLABUS'] || '')
-        : (row['IIT SYLLABUS'] || row['IIT Syllabus'] || row['IIT_SYLLABUS'] || ''),
+      iitSyllabus: row[fourthColHeader] || row['IIT SYLLABUS'] || row['NEET SYLLABUS'] || row['JEE SYLLABUS'] || row['CHEM SYLLABUS'] || '',
       section1: row['SECTION-1'] || row['Section-1'] || 'Not Assigned',
       section2: row['SECTION-2'] || row['Section-2'] || 'Not Assigned',
       section3: row['SECTION-3'] || row['Section-3'] || 'Not Assigned',
@@ -101,15 +94,12 @@ router.get('/submit', (req, res) => {
   }
 });
 
-// POST Update plan data
 router.post('/update', (req, res) => {
   const { blockName, subject, grade, yearPlan } = req.body;
   const filePath = getExistingExcelFilePath(blockName, subject, grade);
 
   try {
-    const upperSubject = (subject || '').toUpperCase();
-    const isBiology = upperSubject === 'BIOLOGY';
-    const fourthColumnHeader = isBiology ? 'NEET SYLLABUS' : 'IIT SYLLABUS';
+    const fourthColumnHeader = getFourthColumnHeader(subject);
 
     const sheetData = yearPlan.map(row => {
       const obj = {
