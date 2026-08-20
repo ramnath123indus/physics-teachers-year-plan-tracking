@@ -39,7 +39,7 @@ function getExistingExcelFilePath(blockName, subject, grade) {
 function getFourthColumnHeader(subject) {
   const upper = (subject || '').toUpperCase();
   if (upper === 'BIOLOGY') return 'NEET SYLLABUS';
-  if (upper === 'CHEMISTRY') return 'JEE SYLLABUS';
+  if (upper === 'CHEMISTRY') return 'JEE SYLLABUS'; // You can change this if your exact header is 'CHEM SYLLABUS'
   return 'IIT SYLLABUS';
 }
 
@@ -77,7 +77,8 @@ router.get('/submit', (req, res) => {
       month: row['MONTH'] || row['Month'] || '',
       ncertSyllabus: row['NCERT SYLLABUS'] || row['NCERT Syllabus'] || '',
       assessments: row['ASSESSMENTS'] || row['Assessments'] || '',
-      iitSyllabus: row[fourthColHeader] || row['IIT SYLLABUS'] || row['NEET SYLLABUS'] || row['JEE SYLLABUS'] || row['CHEM SYLLABUS'] || '',
+      // Expanded fallback list to catch JEE, CHEM, or any custom 4th column header name in Chemistry files
+      iitSyllabus: row[fourthColHeader] || row['JEE SYLLABUS'] || row['JEE_SYLLABUS'] || row['CHEM SYLLABUS'] || row['CHEM_SYLLABUS'] || row['IIT SYLLABUS'] || row['NEET SYLLABUS'] || '',
       section1: row['SECTION-1'] || row['Section-1'] || 'Not Assigned',
       section2: row['SECTION-2'] || row['Section-2'] || 'Not Assigned',
       section3: row['SECTION-3'] || row['Section-3'] || 'Not Assigned',
