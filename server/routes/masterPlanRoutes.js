@@ -27,7 +27,6 @@ function getExistingExcelFilePath(blockName, subject, grade) {
   if (safeBlock.toUpperCase() === 'KAILASH' && safeSubject === 'PHYSICS') {
     fileName = `Kailash_PHYSICS_Grade ${safeGrade}.xlsx`;
   } else {
-    // Rule for all other blocks using general physics or subject templates
     fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
   }
 
@@ -73,7 +72,7 @@ router.get('/submit', (req, res) => {
   }
 });
 
-// POST Update plan data with Auto-Fit Column Width
+// POST Update plan data with Auto-Fit Column Width & Text Wrapping
 router.post('/update', (req, res) => {
   const { blockName, subject, grade, yearPlan } = req.body;
   const filePath = getExistingExcelFilePath(blockName, subject, grade);
@@ -96,26 +95,38 @@ router.post('/update', (req, res) => {
     const newWorkbook = XLSX.utils.book_new();
     const newSheet = XLSX.utils.json_to_sheet(sheetData);
 
-    // --- AUTO-FIT COLUMN WIDTH LOGIC ---
+    // --- AUTO-FIT COLUMN WIDTH & WRAP TEXT LOGIC ---
     const colWidths = [];
-    sheetData.forEach(row => {
-      Object.keys(row).forEach((key, colIndex) => {
-        const val = row[key] ? row[key].toString() : '';
-        const len = Math.max(key.length, val.length);
-        if (!colWidths[colIndex] || len > colWidths[colIndex]) {
-          colWidths[colIndex] = len;
-        }
-      });
-    });
+    
+    // Enable text wrapping across cells and compute maximum column widths
+    const range = XLSX.utils.decode_range(newSheet['!ref']);
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!newSheet[cellAddress]) continue;
 
-    // Assign width with padding (minimum width of 12 for readability)
-    newSheet['!cols'] = colWidths.map(w => ({ wch: Math.max(w + 3, 12) }));
-    // -----------------------------------
+        // Ensure cell style property exists and enables text wrapping
+        if (!newSheet[cellAddress].s) newSheet[cellAddress].s = {};
+        if (!newSheet[cellAddress].s.alignment) newSheet[cellAddress].s.alignment = {};
+        newSheet[cellAddress].s.alignment.wrapText = true;
+
+        // Measure text length for column width calculation
+        const cellVal = newSheet[cellAddress].v ? newSheet[cellAddress].v.toString() : '';
+        const len = cellVal.length;
+        if (!colWidths[C] || len > colWidths[C]) {
+          colWidths[C] = len;
+        }
+      }
+    }
+
+    // Assign width with padding (minimum width of 15 for good spacing)
+    newSheet['!cols'] = colWidths.map(w => ({ wch: Math.max((w || 10) + 4, 15) }));
+    // -------------------------------------------------------------
 
     XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'YearPlan');
     
     XLSX.writeFile(newWorkbook, filePath);
-    res.status(200).json({ success: true, message: 'Excel file updated with auto-fit columns successfully' });
+    res.status(200).json({ success: true, message: 'Excel file updated with wrap text & auto-fit columns successfully' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
