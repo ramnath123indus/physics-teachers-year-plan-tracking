@@ -11,7 +11,7 @@ if (!fs.existsSync(EXCEL_DIR)) {
   EXCEL_DIR = path.join(process.cwd(), 'master-excel-files');
 }
 
-// Precise file resolver matching your specific naming rule for Kailash vs General blocks
+// Precise file resolver matching your specific naming rules for Kailash vs General blocks (Physics & Biology)
 function getExistingExcelFilePath(blockName, subject, grade) {
   const safeBlock = (blockName || '').toString().trim();
   const safeSubject = (subject || '').toString().trim().toUpperCase();
@@ -23,11 +23,24 @@ function getExistingExcelFilePath(blockName, subject, grade) {
 
   let fileName = '';
 
-  // Specific rule for Kailash block and PHYSICS subject
-  if (safeBlock.toUpperCase() === 'KAILASH' && safeSubject === 'PHYSICS') {
-    fileName = `Kailash_PHYSICS_Grade ${safeGrade}.xlsx`;
+  // Rule for Kailash block
+  if (safeBlock.toUpperCase() === 'KAILASH') {
+    if (safeSubject === 'PHYSICS') {
+      fileName = `Kailash_PHYSICS_Grade ${safeGrade}.xlsx`;
+    } else if (safeSubject === 'BIOLOGY') {
+      fileName = `Kailash_BIOLOGY_Grade ${safeGrade}.xlsx`;
+    } else {
+      fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
+    }
   } else {
-    fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
+    // Rule for all other blocks (General, Nilgiri, Aravalli, etc.)
+    if (safeSubject === 'PHYSICS') {
+      fileName = `General_PHYSICS_Grade ${safeGrade}.xlsx`;
+    } else if (safeSubject === 'BIOLOGY') {
+      fileName = `General_BIOLOGY_Grade ${safeGrade}.xlsx`;
+    } else {
+      fileName = `General_${safeSubject}_Grade ${safeGrade}.xlsx`;
+    }
   }
 
   return path.join(EXCEL_DIR, fileName);
@@ -72,7 +85,7 @@ router.get('/submit', (req, res) => {
   }
 });
 
-// POST Update plan data with Auto-Fit Column Width & Text Wrapping
+// POST Update plan data with Auto-Fit & Full Cell Visibility
 router.post('/update', (req, res) => {
   const { blockName, subject, grade, yearPlan } = req.body;
   const filePath = getExistingExcelFilePath(blockName, subject, grade);
@@ -95,22 +108,15 @@ router.post('/update', (req, res) => {
     const newWorkbook = XLSX.utils.book_new();
     const newSheet = XLSX.utils.json_to_sheet(sheetData);
 
-    // --- AUTO-FIT COLUMN WIDTH & WRAP TEXT LOGIC ---
+    // --- AUTO-FIT COLUMN WIDTHS & CELL VISIBILITY ---
     const colWidths = [];
-    
-    // Enable text wrapping across cells and compute maximum column widths
     const range = XLSX.utils.decode_range(newSheet['!ref']);
+
     for (let R = range.s.r; R <= range.e.r; ++R) {
       for (let C = range.s.c; C <= range.e.c; ++C) {
         const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
         if (!newSheet[cellAddress]) continue;
 
-        // Ensure cell style property exists and enables text wrapping
-        if (!newSheet[cellAddress].s) newSheet[cellAddress].s = {};
-        if (!newSheet[cellAddress].s.alignment) newSheet[cellAddress].s.alignment = {};
-        newSheet[cellAddress].s.alignment.wrapText = true;
-
-        // Measure text length for column width calculation
         const cellVal = newSheet[cellAddress].v ? newSheet[cellAddress].v.toString() : '';
         const len = cellVal.length;
         if (!colWidths[C] || len > colWidths[C]) {
@@ -119,14 +125,14 @@ router.post('/update', (req, res) => {
       }
     }
 
-    // Assign width with padding (minimum width of 15 for good spacing)
-    newSheet['!cols'] = colWidths.map(w => ({ wch: Math.max((w || 10) + 4, 15) }));
-    // -------------------------------------------------------------
+    // Set generous width boundaries so cells are fully readable
+    newSheet['!cols'] = colWidths.map(w => ({ wch: Math.max((w || 10) + 5, 22) }));
+    // ----------------------------------------------
 
     XLSX.utils.book_append_sheet(newWorkbook, newSheet, 'YearPlan');
     
     XLSX.writeFile(newWorkbook, filePath);
-    res.status(200).json({ success: true, message: 'Excel file updated with wrap text & auto-fit columns successfully' });
+    res.status(200).json({ success: true, message: 'Excel file updated successfully with full cell visibility' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
